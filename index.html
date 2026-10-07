@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halloween Candy Quest</title>
+<!--
+  Halloween Candy Quest
+  Created by KKGilchrist / KnR GitHub
+  Copyright (c) 2026 KKGilchrist / KnR
+
+  License: Free to play and share with credit.
+  Please don’t reupload modified copies or claim the game as your own.
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    color: #fff;
+  }
+  #gameContainer {
+    position: relative;
+    box-shadow: 0 0 40px rgba(255, 100, 0, 0.3);
+    border: 3px solid #ff6b00;
+    border-radius: 8px;
+  }
+  canvas {
+    display: block;
+    background: #1a1a2e;
+  }
+  #ui {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+  .screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(10, 10, 20, 0.92);
+    pointer-events: auto;
+    transition: opacity 0.4s;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+  h1 {
+    font-size: 48px;
+    color: #ff6b00;
+    text-shadow: 0 0 20px #ff6b00, 0 0 40px #ff3300;
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+  }
+  h2 {
+    font-size: 28px;
+    color: #ffcc00;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px #ffaa00;
+  }
+  .subtitle {
+    color: #aaa;
+    margin-bottom: 40px;
+    font-size: 16px;
+  }
+  .costume-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, #2a1a3a, #1a1025);
+    border: 2px solid #ff6b00;
+    color: #fff;
+    padding: 14px 28px;
+    margin: 10px;
+    font-size: 22px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 260px;
+    justify-content: flex-start;
+  }
+  .costume-btn:hover {
+    background: linear-gradient(135deg, #3a2a4a, #2a1a35);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
+  }
+  .costume-btn .emoji { font-size: 36px; }
+  .costume-btn .info { text-align: left; }
+  .costume-btn .name { font-weight: bold; }
+  .costume-btn .desc { font-size: 13px; color: #bbb; }
+  #hud {
+    position: absolute;
+    top: 12px; left: 12px; right: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    text-shadow: 0 0 6px #000;
+    pointer-events: none;
+  }
+  #hud span { background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; }
+  .instructions {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: #ccc;
+  }
+  #booOverlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.7);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  #booText {
+    font-size: 120px;
+    font-weight: 900;
+    color: #ff2200;
+    text-shadow: 0 0 30px #ff0000, 0 0 60px #aa0000;
+    letter-spacing: 20px;
+    transform: scale(0.5);
+    transition: transform 0.6s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="900" height="500"></canvas>
+  <div id="ui">
+    <!-- Title / Costume Select -->
+    <div id="titleScreen" class="screen">
+      <h1>🎃 HALLOWEEN QUEST 🎃</h1>
+      <p class="subtitle">Choose your costume and collect candy... if you dare!</p>
+      <p style="color:#ffaa66; font-size:15px; margin-bottom:8px;">Created by <strong>KKGilchrist / KnR</strong> · GitHub</p>
+      <p style="color:#888; font-size:12px; max-width:420px; text-align:center; margin-bottom:24px; line-height:1.4;">
+        Free to play and share with credit.<br>
+        Please don’t reupload modified copies or claim the game as your own.
+      </p>
+      <h2>Select Costume</h2>
+      <button class="costume-btn" data-costume="ghost">
+        <span class="emoji">👻</span>
+        <div class="info"><div class="name">Ghost</div><div class="desc">Fast &amp; floaty • +Speed</div></div>
+      </button>
+      <button class="costume-btn" data-costume="witch">
+        <span class="emoji">🧙‍♀️</span>
+        <div class="info"><div class="name">Witch</div><div class="desc">Magical power • +Damage</div></div>
+      </button>
+      <button class="costume-btn" data-costume="pirate">
+        <span class="emoji">🏴‍☠️</span>
+        <div class="info"><div class="name">Pirate</div><div class="desc">Tough &amp; sturdy • +Health</div></div>
+      </button>
+    </div>
+
+    <!-- Game Over / Win -->
+    <div id="endScreen" class="screen hidden">
+      <h1 id="endTitle">Game Over</h1>
+      <p id="endMsg" class="subtitle"></p>
+      <p style="color:#ffaa66; font-size:14px; margin-bottom:6px;">Created by KKGilchrist / KnR · GitHub</p>
+      <p style="color:#777; font-size:11px; max-width:380px; text-align:center; margin-bottom:20px; line-height:1.35;">
+        Free to play and share with credit. Please don’t reupload modified copies or claim the game as your own.
+      </p>
+      <button class="costume-btn" id="restartBtn" style="justify-content:center;">
+        <span class="emoji">🔄</span> Play Again
+      </button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" style="display:none;">
+      <span id="candyCount">🍬 Candy: 0</span>
+      <span id="levelInfo">Level 1</span>
+      <span id="hpInfo">❤️ HP: 100</span>
+    </div>
+    <div class="instructions" id="instructions" style="display:none;"></div>
+  </div>
+  <div id="booOverlay">
+    <div id="booText">BOO!</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// HALLOWEEN QUEST - Simple Canvas Game
+// ============================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// Game state
+let state = 'title'; // title | trick | cutscene | tunnel | battle | end
+let costume = null;
+let player = null;
+let candy = 0;
+let keys = {};
+let houses = [];
+let collected = [false, false, false];
+let monsters = [];
+let particles = [];
+let archMonster = null;
+let level = 1;
+let battleTimer = 0;
+let cutsceneTimer = 0;
+let tunnelProgress = 0;
+let screenShake = 0;
+let message = '';
+let messageTimer = 0;
+let targetX = null;  // click-to-move target
+let targetY = null;
+let lastCandyShakeDone = false;
+
+// ============================================================
+// AUDIO – Original Halloween novelty vibe (Web Audio API)
+// Light bouncy melody → heavy battle riff → intense tunnel spin
+// No copyrighted melodies used
+// ============================================================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+let masterGain = null;
+let musicNodes = [];       // active oscillators/gains to stop
+let currentMusicMode = null; // 'light' | 'heavy' | 'tunnel' | null
+let musicStep = 0;
+let musicTimer = null;
+let tunnelNoiseNode = null;
+
+function initAudio() {
+  if (actx) return;
+  actx = new AudioCtx();
+  masterGain = actx.createGain();
+  masterGain.gain.value = 0.28;
+  masterGain.connect(actx.destination);
+}
+
+function stopMusic() {
+  if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  musicNodes.forEach(n => {
+    try { n.stop?.(); n.disconnect?.(); } catch(e) {}
+  });
+  musicNodes = [];
+  if (tunnelNoiseNode) {
+    try { tunnelNoiseNode.stop(); tunnelNoiseNode.disconnect(); } catch(e) {}
+    tunnelNoiseNode = null;
+  }
+  currentMusicMode = null;
+  musicStep = 0;
+}
+
+// ---- Light novelty melody (trick-or-treat) ----
+// Bouncy minor-key novelty feel, original notes
+const LIGHT_MELODY = [
+  // bar 1
+  {n: 55, d: 0.22}, {n: 58, d: 0.22}, {n: 62, d: 0.22}, {n: 58, d: 0.22},
+  {n: 55, d: 0.22}, {n: 58, d: 0.22}, {n: 65, d: 0.35}, {n: 62, d: 0.18},
+  // bar 2
+  {n: 58, d: 0.22}, {n: 62, d: 0.22}, {n: 67, d: 0.22}, {n: 62, d: 0.22},
+  {n: 58, d: 0.22}, {n: 55, d: 0.22}, {n: 53, d: 0.45}, {n: 0,  d: 0.15},
+];
+const LIGHT_BASS = [
+  43, 43, 46, 46, 43, 43, 41, 41,
+  46, 46, 48, 48, 43, 43, 41, 41
+];
+
+function playLightNote(midi, dur, type = 'square', vol = 0.12) {
+  if (!actx || midi === 0) return;
+  const osc = actx.createOscillator();
+  const g = actx.createGain();
+  osc.type = type;
+  osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+  g.gain.setValueAtTime(vol, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+  osc.connect(g); g.connect(masterGain);
+  osc.start(); osc.stop(actx.currentTime + dur + 0.05);
+  musicNodes.push(osc, g);
+}
+
+function startLightMusic() {
+  initAudio();
+  if (actx.state === 'suspended') actx.resume();
+  stopMusic();
+  currentMusicMode = 'light';
+  musicStep = 0;
+  let beat = 0;
+  musicTimer = setInterval(() => {
+    if (currentMusicMode !== 'light') return;
+    const note = LIGHT_MELODY[musicStep % LIGHT_MELODY.length];
+    playLightNote(note.n, note.d, 'square', 0.11);
+    // soft bass every other step
+    if (musicStep % 2 === 0) {
+      const b = LIGHT_BASS[(musicStep / 2) % LIGHT_BASS.length];
+      playLightNote(b, 0.4, 'triangle', 0.09);
+    }
+    // light percussion click
+    if (musicStep % 4 === 0) {
+      const n = actx.createOscillator();
+      const g = actx.createGain();
+      n.type = 'square';
+      n.frequency.value = 180;
+      g.gain.setValueAtTime(0.06, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.08);
+      n.connect(g); g.connect(masterGain);
+      n.start(); n.stop(actx.currentTime + 0.1);
+      musicNodes.push(n, g);
+    }
+    musicStep++;
+  }, 280);
+}
+
+// ---- Heavy battle riff ----
+const HEAVY_RIFF = [
+  {n: 36, d: 0.18}, {n: 36, d: 0.18}, {n: 43, d: 0.18}, {n: 36, d: 0.18},
+  {n: 39, d: 0.18}, {n: 36, d: 0.18}, {n: 43, d: 0.28}, {n: 41, d: 0.15},
+  {n: 36, d: 0.18}, {n: 36, d: 0.18}, {n: 46, d: 0.18}, {n: 43, d: 0.18},
+  {n: 39, d: 0.18}, {n: 36, d: 0.18}, {n: 34, d: 0.35}, {n: 0,  d: 0.12},
+];
+
+function playHeavyNote(midi, dur, vol = 0.16) {
+  if (!actx || midi === 0) return;
+  // layered saw + square for weight
+  ['sawtooth', 'square'].forEach((type, i) => {
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    osc.type = type;
+    osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    const v = vol * (i === 0 ? 0.7 : 0.45);
+    g.gain.setValueAtTime(v, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(actx.currentTime + dur + 0.05);
+    musicNodes.push(osc, g);
+  });
+}
+
+function startHeavyMusic() {
+  initAudio();
+  if (actx.state === 'suspended') actx.resume();
+  stopMusic();
+  currentMusicMode = 'heavy';
+  musicStep = 0;
+  musicTimer = setInterval(() => {
+    if (currentMusicMode !== 'heavy') return;
+    const note = HEAVY_RIFF[musicStep % HEAVY_RIFF.length];
+    playHeavyNote(note.n, note.d, 0.15);
+    // driving kick-ish thump
+    if (musicStep % 2 === 0) {
+      const osc = actx.createOscillator();
+      const g = actx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, actx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, actx.currentTime + 0.15);
+      g.gain.setValueAtTime(0.22, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.18);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(); osc.stop(actx.currentTime + 0.2);
+      musicNodes.push(osc, g);
+    }
+    // snare-ish noise hit
+    if (musicStep % 4 === 2) {
+      const bufferSize = actx.sampleRate * 0.1;
+      const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      const noise = actx.createBufferSource();
+      noise.buffer = buffer;
+      const g = actx.createGain();
+      g.gain.setValueAtTime(0.1, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.1);
+      noise.connect(g); g.connect(masterGain);
+      noise.start();
+      musicNodes.push(noise, g);
+    }
+    musicStep++;
+  }, 220);
+}
+
+// ---- Intense tunnel spin / whoosh ----
+function startTunnelSound() {
+  initAudio();
+  if (actx.state === 'suspended') actx.resume();
+  stopMusic();
+  currentMusicMode = 'tunnel';
+
+  // Rising swirling oscillators
+  for (let i = 0; i < 4; i++) {
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    const f = actx.createBiquadFilter();
+    osc.type = i % 2 === 0 ? 'sawtooth' : 'square';
+    osc.frequency.setValueAtTime(80 + i * 40, actx.currentTime);
+    osc.frequency.linearRampToValueAtTime(400 + i * 180, actx.currentTime + 2.8);
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(200, actx.currentTime);
+    f.frequency.linearRampToValueAtTime(2000, actx.currentTime + 2.8);
+    f.Q.value = 4;
+    g.gain.setValueAtTime(0.01, actx.currentTime);
+    g.gain.linearRampToValueAtTime(0.12 - i * 0.02, actx.currentTime + 0.4);
+    g.gain.linearRampToValueAtTime(0.18 - i * 0.03, actx.currentTime + 2.2);
+    g.gain.linearRampToValueAtTime(0.001, actx.currentTime + 3.0);
+    osc.connect(f); f.connect(g); g.connect(masterGain);
+    osc.start();
+    osc.stop(actx.currentTime + 3.1);
+    musicNodes.push(osc, g, f);
+  }
+
+  // Heavy noise whoosh
+  const bufferSize = actx.sampleRate * 3.2;
+  const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / actx.sampleRate;
+    const env = Math.sin((t / 3.2) * Math.PI); // swell then fade
+    data[i] = (Math.random() * 2 - 1) * env * 0.7;
+  }
+  const noise = actx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = actx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(300, actx.currentTime);
+  filter.frequency.linearRampToValueAtTime(4000, actx.currentTime + 2.0);
+  filter.frequency.linearRampToValueAtTime(200, actx.currentTime + 3.0);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.2, actx.currentTime);
+  g.gain.linearRampToValueAtTime(0.35, actx.currentTime + 1.5);
+  g.gain.linearRampToValueAtTime(0.001, actx.currentTime + 3.1);
+  noise.connect(filter); filter.connect(g); g.connect(masterGain);
+  noise.start();
+  tunnelNoiseNode = noise;
+  musicNodes.push(noise, g, filter);
+
+  // Deep pulsing sub for “heavy” feel
+  const sub = actx.createOscillator();
+  const sg = actx.createGain();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(45, actx.currentTime);
+  sub.frequency.linearRampToValueAtTime(70, actx.currentTime + 2.5);
+  sg.gain.setValueAtTime(0.15, actx.currentTime);
+  sg.gain.linearRampToValueAtTime(0.28, actx.currentTime + 1.8);
+  sg.gain.linearRampToValueAtTime(0.001, actx.currentTime + 3.0);
+  sub.connect(sg); sg.connect(masterGain);
+  sub.start(); sub.stop(actx.currentTime + 3.1);
+  musicNodes.push(sub, sg);
+}
+
+// Short SFX helpers
+function sfxCandy() {
+  if (!actx) return;
+  const osc = actx.createOscillator();
+  const g = actx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(660, actx.currentTime);
+  osc.frequency.linearRampToValueAtTime(990, actx.currentTime + 0.12);
+  g.gain.setValueAtTime(0.15, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.2);
+  osc.connect(g); g.connect(masterGain);
+  osc.start(); osc.stop(actx.currentTime + 0.25);
+}
+
+function sfxHit() {
+  if (!actx) return;
+  const osc = actx.createOscillator();
+  const g = actx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(180, actx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(60, actx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.1, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.12);
+  osc.connect(g); g.connect(masterGain);
+  osc.start(); osc.stop(actx.currentTime + 0.15);
+}
+
+function sfxArchAppear() {
+  if (!actx) return;
+  const osc = actx.createOscillator();
+  const g = actx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(80, actx.currentTime);
+  osc.frequency.linearRampToValueAtTime(40, actx.currentTime + 0.5);
+  g.gain.setValueAtTime(0.2, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.6);
+  osc.connect(g); g.connect(masterGain);
+  osc.start(); osc.stop(actx.currentTime + 0.65);
+}
+
+// Costume stats
+const COSTUMES = {
+  ghost:  { emoji: '👻', color: '#e0e0ff', speed: 4.2, damage: 12, maxHp: 80,  name: 'Ghost' },
+  witch:  { emoji: '🧙‍♀️', color: '#c0a0ff', speed: 3.4, damage: 18, maxHp: 90,  name: 'Witch' },
+  pirate: { emoji: '🏴‍☠️', color: '#ffaa55', speed: 3.0, damage: 14, maxHp: 120, name: 'Pirate' }
+};
+
+// Input – keyboard still works as fallback, primary is click-to-move
+window.addEventListener('keydown', e => { keys[e.code] = true; if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Click-to-move
+canvas.addEventListener('click', (e) => {
+  if (state !== 'trick' && state !== 'battle') return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  targetX = (e.clientX - rect.left) * scaleX;
+  targetY = (e.clientY - rect.top) * scaleY;
+});
+
+// Costume selection
+document.querySelectorAll('.costume-btn[data-costume]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    costume = btn.dataset.costume;
+    startTrickOrTreat();
+  });
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+  document.getElementById('endScreen').classList.add('hidden');
+  document.getElementById('titleScreen').classList.remove('hidden');
+  state = 'title';
+  candy = 0;
+  level = 1;
+  screenShake = 0;
+  particles = [];
+  monsters = [];
+  archMonster = null;
+  waveIntermission = false;
+  stopMusic();
+});
+
+// ============================================================
+// PLAYER
+// ============================================================
+function createPlayer() {
+  const c = COSTUMES[costume];
+  return {
+    x: 80, y: H - 90,
+    w: 40, h: 50,
+    vx: 0, vy: 0,
+    speed: c.speed,
+    damage: c.damage,
+    hp: c.maxHp,
+    maxHp: c.maxHp,
+    emoji: c.emoji,
+    color: c.color,
+    facing: 1,
+    attackCooldown: 0,
+    invuln: 0
+  };
+}
+
+// ============================================================
+// TRICK-OR-TREAT SCENE
+// ============================================================
+function startTrickOrTreat() {
+  document.getElementById('titleScreen').classList.add('hidden');
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('instructions').style.display = 'block';
+  document.getElementById('instructions').textContent = 'Click to move  •  Walk near a house to collect candy';
+  state = 'trick';
+  player = createPlayer();
+  player.x = 60;
+  player.y = H - 100;
+  candy = 0;
+  collected = [false, false, false];
+  lastCandyShakeDone = false;
+  screenShake = 0;
+  particles = [];
+  targetX = null;
+  targetY = null;
+  houses = [
+    { x: 220, collected: false },
+    { x: 450, collected: false },
+    { x: 680, collected: false }
+  ];
+  updateHUD();
+  startLightMusic();
+}
+
+function updateTrick() {
+  // Click-to-move (horizontal only on the road)
+  if (targetX !== null) {
+    const dx = targetX - player.x;
+    if (Math.abs(dx) > 4) {
+      player.vx = Math.sign(dx) * player.speed;
+      player.facing = Math.sign(dx);
+      player.x += player.vx;
+    } else {
+      player.x = targetX;
+      targetX = null;
+    }
+  } else {
+    // Keyboard fallback
+    player.vx = 0;
+    if (keys['ArrowLeft'] || keys['KeyA']) { player.vx = -player.speed; player.facing = -1; }
+    if (keys['ArrowRight'] || keys['KeyD']) { player.vx = player.speed; player.facing = 1; }
+    player.x += player.vx;
+  }
+  player.x = Math.max(30, Math.min(W - 30, player.x));
+  player.y = H - 100; // stay on road
+
+  // Auto-collect candy when near a house
+  houses.forEach((h, i) => {
+    if (!h.collected && Math.abs(player.x - h.x) < 55) {
+      h.collected = true;
+      collected[i] = true;
+      candy += 1 + Math.floor(Math.random() * 3);
+      spawnParticles(h.x, H - 120, '#ffcc00', 12);
+      sfxCandy();
+      message = '+Candy!';
+      messageTimer = 40;
+      updateHUD();
+
+      // Screen shake ONLY after the last (3rd) house
+      if (collected.every(c => c) && !lastCandyShakeDone) {
+        lastCandyShakeDone = true;
+        screenShake = 18;
+        message = 'All candy collected! Something glows in the distance...';
+        messageTimer = 90;
+        setTimeout(() => startCutscene(), 1600);
+      }
+    }
+  });
+}
+
+function drawTrick() {
+  // Sky gradient night
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(0.6, '#1a1025');
+  grad.addColorStop(1, '#2a1a15');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Moon
+  ctx.beginPath();
+  ctx.arc(780, 70, 40, 0, Math.PI * 2);
+  ctx.fillStyle = '#fffacd';
+  ctx.shadowColor = '#fffacd';
+  ctx.shadowBlur = 30;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Stars
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 97 + 20) % W;
+    const sy = (i * 53 + 10) % 180;
+    ctx.globalAlpha = 0.4 + (i % 3) * 0.2;
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Road
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(0, H - 60, W, 60);
+  ctx.fillStyle = '#3a3a3a';
+  for (let i = 0; i < 12; i++) {
+    ctx.fillRect(i * 80 + 20, H - 35, 40, 6);
+  }
+
+  // Houses
+  houses.forEach((h, i) => {
+    drawHouse(h.x, H - 60, h.collected);
+  });
+
+  // Player
+  drawPlayer();
+
+  // Message
+  if (messageTimer > 0) {
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(message, W / 2, 50);
+    messageTimer--;
+  }
+}
+
+function drawHouse(x, baseY, collected) {
+  // Body
+  ctx.fillStyle = collected ? '#3a2a1a' : '#4a3020';
+  ctx.fillRect(x - 45, baseY - 100, 90, 100);
+  // Roof
+  ctx.fillStyle = '#6b1a1a';
+  ctx.beginPath();
+  ctx.moveTo(x - 55, baseY - 100);
+  ctx.lineTo(x, baseY - 150);
+  ctx.lineTo(x + 55, baseY - 100);
+  ctx.closePath();
+  ctx.fill();
+  // Door
+  ctx.fillStyle = '#2a150a';
+  ctx.fillRect(x - 15, baseY - 50, 30, 50);
+  // Windows
+  ctx.fillStyle = collected ? '#332200' : '#ffaa33';
+  ctx.fillRect(x - 35, baseY - 80, 18, 18);
+  ctx.fillRect(x + 17, baseY - 80, 18, 18);
+  // Candy on porch
+  if (!collected) {
+    ctx.font = '22px serif';
+    ctx.fillText('🍬', x - 10, baseY - 10);
+  } else {
+    ctx.fillStyle = '#666';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('empty', x, baseY - 8);
+  }
+}
+
+// ============================================================
+// CUTSCENE + TUNNEL
+// ============================================================
+function startCutscene() {
+  state = 'cutscene';
+  cutsceneTimer = 0;
+  player.x = 100;
+  document.getElementById('instructions').textContent = 'A strange glow appears...';
+}
+
+function updateCutscene() {
+  cutsceneTimer++;
+  // Player runs toward glow
+  if (cutsceneTimer < 120) {
+    player.x += 3.5;
+    player.facing = 1;
+  }
+  if (cutsceneTimer === 120) {
+    state = 'tunnel';
+    tunnelProgress = 0;
+    document.getElementById('instructions').textContent = 'WHOOSH! Through the timescape...';
+    startTunnelSound();
+  }
+}
+
+function drawCutscene() {
+  drawTrick(); // reuse background
+  // Glow in distance
+  const glowX = 820;
+  const pulse = 0.6 + Math.sin(cutsceneTimer * 0.15) * 0.4;
+  ctx.beginPath();
+  ctx.arc(glowX, H - 120, 30 + pulse * 20, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(180, 100, 255, ${0.3 * pulse})`;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(glowX, H - 120, 15, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255, 200, 100, ${0.8 * pulse})`;
+  ctx.fill();
+  drawPlayer();
+}
+
+function updateTunnel() {
+  tunnelProgress += 0.018;
+  if (tunnelProgress >= 1) {
+    showBoo();
+  }
+}
+
+function drawTunnel() {
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+
+  // Spinning rings
+  const cx = W / 2, cy = H / 2;
+  for (let i = 0; i < 12; i++) {
+    const r = 20 + i * 35 + tunnelProgress * 200;
+    const angle = tunnelProgress * 8 + i * 0.5;
+    ctx.strokeStyle = `hsla(${280 + i * 15}, 80%, 60%, ${1 - i * 0.07})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r, r * 0.4, angle, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Player spinning
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tunnelProgress * 12);
+  ctx.font = '48px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(player.emoji, 0, 0);
+  ctx.restore();
+
+  // Speed lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  for (let i = 0; i < 30; i++) {
+    const a = (i / 30) * Math.PI * 2 + tunnelProgress * 5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * 50, cy + Math.sin(a) * 20);
+    ctx.lineTo(cx + Math.cos(a) * 400, cy + Math.sin(a) * 160);
+    ctx.stroke();
+  }
+}
+
+function showBoo() {
+  state = 'boo';
+  const overlay = document.getElementById('booOverlay');
+  const text = document.getElementById('booText');
+  overlay.style.opacity = '1';
+  text.style.transform = 'scale(1.3)';
+  setTimeout(() => {
+    text.style.transform = 'scale(1)';
+  }, 100);
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    text.style.transform = 'scale(0.5)';
+    startBattle();
+  }, 1800);
+}
+
+// ============================================================
+// BATTLE
+// ============================================================
+let waveIntermission = false; // true = breathing room between stages
+let archSpawnedThisWave = false;
+
+function startBattle() {
+  state = 'battle';
+  player.x = W / 2;
+  player.y = H / 2;
+  player.hp = player.maxHp;
+  monsters = [];
+  archMonster = null;
+  battleTimer = 0;
+  targetX = null;
+  targetY = null;
+  waveIntermission = false;
+  archSpawnedThisWave = false;
+  spawnWave();
+  document.getElementById('instructions').textContent = 'Click to move  •  Auto-attacks  •  H/C = spend candy to heal  •  Defeat the Arch-Monster!';
+  updateHUD();
+  startHeavyMusic();
+}
+
+// Spawn from a random edge so fights aren't always right-side rushes
+function randomEdgeSpawn() {
+  const edge = Math.floor(Math.random() * 4); // 0=right 1=left 2=top 3=bottom
+  let x, y, vx, vy;
+  const speed = 0.6 + Math.random() * 0.9;
+  if (edge === 0) { // right
+    x = W - 30; y = 60 + Math.random() * (H - 120);
+    vx = -speed; vy = (Math.random() - 0.5) * 1.2;
+  } else if (edge === 1) { // left
+    x = 30; y = 60 + Math.random() * (H - 120);
+    vx = speed; vy = (Math.random() - 0.5) * 1.2;
+  } else if (edge === 2) { // top
+    x = 60 + Math.random() * (W - 120); y = 30;
+    vx = (Math.random() - 0.5) * 1.2; vy = speed;
+  } else { // bottom
+    x = 60 + Math.random() * (W - 120); y = H - 30;
+    vx = (Math.random() - 0.5) * 1.2; vy = -speed;
+  }
+  return { x, y, vx, vy };
+}
+
+function spawnWave() {
+  monsters = [];
+  archSpawnedThisWave = false;
+  battleTimer = 0;
+  waveIntermission = false;
+  const count = 4 + Math.floor(level * 1.2);
+  for (let i = 0; i < count; i++) {
+    const pos = randomEdgeSpawn();
+    monsters.push({
+      x: pos.x,
+      y: pos.y,
+      vx: pos.vx,
+      vy: pos.vy,
+      hp: 18 + level * 3,
+      maxHp: 18 + level * 3,
+      size: 22 + Math.random() * 10,
+      emoji: ['🦇', '🎃', '💀', '🕷️', '😈'][Math.floor(Math.random() * 5)],
+      alive: true
+    });
+  }
+}
+
+function spawnArchMonster() {
+  // Eat all remaining small monsters
+  let eaten = 0;
+  monsters.forEach(m => {
+    if (m.alive) {
+      m.alive = false;
+      eaten++;
+      spawnParticles(m.x, m.y, '#ff4400', 8);
+    }
+  });
+  // Spawn arch from a random edge (not always the right)
+  const pos = randomEdgeSpawn();
+  const sizeBoost = 34 + eaten * 5 + level * 4;
+  const baseHp = 32 + level * 12 + eaten * 7;
+  archMonster = {
+    x: pos.x,
+    y: pos.y,
+    vx: pos.vx * 0.5,
+    vy: pos.vy * 0.5,
+    hp: baseHp,
+    maxHp: baseHp,
+    size: sizeBoost,
+    emoji: level % 2 === 0 ? '👹' : '👺',
+    phase: 0,
+    eatAnim: 30
+  };
+  archSpawnedThisWave = true;
+  screenShake = 16;
+  message = 'ARCH-MONSTER APPEARS!';
+  messageTimer = 80;
+  sfxArchAppear();
+}
+
+// Called when arch is defeated – heal, boosts, long intermission
+function onStageClear() {
+  archMonster = null;
+  level++;
+
+  // Full life renew every harder stage
+  player.hp = player.maxHp;
+
+  // Permanent small boosts so longer runs feel rewarding
+  player.maxHp += 8;
+  player.hp = player.maxHp;
+  player.damage += 1.5;
+  if (level % 3 === 0) player.speed += 0.15; // occasional speed boost
+
+  // Candy bonus
+  candy += 15 + level * 5;
+
+  waveIntermission = true;
+  battleTimer = 0;
+  message = `Stage ${level}! HP restored + boosts! Collect candy to heal…`;
+  messageTimer = 120;
+  updateHUD();
+
+  // Generous breathing room before next wave
+  setTimeout(() => {
+    if (state === 'battle') {
+      message = 'New wave incoming from all sides!';
+      messageTimer = 60;
+      spawnWave();
+    }
+  }, 4500); // 4.5 seconds of downtime
+}
+
+function updateBattle() {
+  battleTimer++;
+
+  // Click-to-move
+  if (targetX !== null && targetY !== null) {
+    const dx = targetX - player.x;
+    const dy = targetY - player.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 5) {
+      player.vx = (dx / d) * player.speed;
+      player.vy = (dy / d) * player.speed;
+      player.facing = dx >= 0 ? 1 : -1;
+      player.x += player.vx;
+      player.y += player.vy;
+    } else {
+      targetX = null;
+      targetY = null;
+    }
+  } else {
+    // Keyboard fallback
+    player.vx = 0; player.vy = 0;
+    if (keys['ArrowLeft'] || keys['KeyA']) { player.vx = -player.speed; player.facing = -1; }
+    if (keys['ArrowRight'] || keys['KeyD']) { player.vx = player.speed; player.facing = 1; }
+    if (keys['ArrowUp'] || keys['KeyW']) player.vy = -player.speed;
+    if (keys['ArrowDown'] || keys['KeyS']) player.vy = player.speed;
+    player.x += player.vx;
+    player.y += player.vy;
+  }
+  player.x = Math.max(30, Math.min(W - 30, player.x));
+  player.y = Math.max(40, Math.min(H - 40, player.y));
+
+  if (player.attackCooldown > 0) player.attackCooldown--;
+  if (player.invuln > 0) player.invuln--;
+
+  // Auto-attack when enemies are in range
+  if (player.attackCooldown <= 0) {
+    const range = 75;
+    let didAttack = false;
+
+    monsters.forEach(m => {
+      if (m.alive && dist(player.x, player.y, m.x, m.y) < range + m.size) {
+        m.hp -= player.damage;
+        spawnParticles(m.x, m.y, '#ffaa00', 5);
+        didAttack = true;
+        if (m.hp <= 0) {
+          m.alive = false;
+          candy += 2;
+          spawnParticles(m.x, m.y, '#ff4400', 12);
+        }
+      }
+    });
+
+    if (archMonster && dist(player.x, player.y, archMonster.x, archMonster.y) < range + archMonster.size * 0.55) {
+      archMonster.hp -= player.damage;
+      spawnParticles(archMonster.x, archMonster.y, '#ff6600', 8);
+      didAttack = true;
+      if (player.attackCooldown <= 0) screenShake = Math.max(screenShake, 5);
+      if (archMonster.hp <= 0) {
+        spawnParticles(archMonster.x, archMonster.y, '#ff0000', 28);
+        onStageClear();
+      }
+    }
+
+    if (didAttack) {
+      player.attackCooldown = 16;
+      sfxHit();
+      updateHUD();
+    }
+  }
+
+  // Press H or C to spend 1 candy → +10 HP (anytime)
+  if (candy > 0 && player.hp < player.maxHp && (keys['KeyH'] || keys['KeyC'])) {
+    keys['KeyH'] = false; // consume so it doesn't spam every frame
+    keys['KeyC'] = false;
+    candy--;
+    player.hp = Math.min(player.maxHp, player.hp + 10);
+    spawnParticles(player.x, player.y - 20, '#66ff99', 6);
+    sfxCandy();
+    updateHUD();
+  }
+  // During intermission, candy slowly auto-heals so you can recover
+  if (waveIntermission && candy > 0 && player.hp < player.maxHp && battleTimer % 25 === 0) {
+    candy--;
+    player.hp = Math.min(player.maxHp, player.hp + 8);
+    spawnParticles(player.x, player.y - 20, '#66ff99', 4);
+    updateHUD();
+  }
+
+  // Update small monsters – bounce on all edges
+  let aliveCount = 0;
+  monsters.forEach(m => {
+    if (!m.alive) return;
+    aliveCount++;
+    m.x += m.vx;
+    m.y += m.vy;
+    // Bounce off all four edges so they roam the whole arena
+    if (m.x < 25) { m.x = 25; m.vx = Math.abs(m.vx); }
+    if (m.x > W - 25) { m.x = W - 25; m.vx = -Math.abs(m.vx); }
+    if (m.y < 35) { m.y = 35; m.vy = Math.abs(m.vy); }
+    if (m.y > H - 35) { m.y = H - 35; m.vy = -Math.abs(m.vy); }
+    // Contact damage
+    if (player.invuln <= 0 && dist(player.x, player.y, m.x, m.y) < 35 + m.size * 0.4) {
+      player.hp -= 6 + level * 1.5;
+      player.invuln = 45;
+      screenShake = 8;
+      updateHUD();
+      if (player.hp <= 0) endGame(false);
+    }
+  });
+
+  // Spawn arch only after enough fight time and few monsters left
+  // Longer delay so player isn't rushed
+  if (!archMonster && !waveIntermission && !archSpawnedThisWave) {
+    const readyByCount = aliveCount <= 1;
+    const readyByTime = battleTimer > 520 + level * 40; // more time before forced arch
+    if ((readyByCount && battleTimer > 180) || readyByTime) {
+      spawnArchMonster();
+    }
+  }
+
+  // Update arch – slower & less punishing at low levels
+  if (archMonster) {
+    if (archMonster.eatAnim > 0) archMonster.eatAnim--;
+    const dx = player.x - archMonster.x;
+    const dy = player.y - archMonster.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const speed = 0.85 + level * 0.06; // slow speed gains per level
+    archMonster.vx = (dx / d) * speed;
+    archMonster.vy = (dy / d) * speed;
+    archMonster.x += archMonster.vx;
+    archMonster.y += archMonster.vy;
+    archMonster.phase += 0.08;
+
+    if (player.invuln <= 0 && dist(player.x, player.y, archMonster.x, archMonster.y) < 40 + archMonster.size * 0.5) {
+      player.hp -= 8 + level * 1.5; // slow damage gains per level
+      player.invuln = 55;
+      screenShake = 12;
+      updateHUD();
+      if (player.hp <= 0) endGame(false);
+    }
+  }
+
+  // Particles
+  particles = particles.filter(p => {
+    p.x += p.vx; p.y += p.vy; p.life--;
+    p.vy += 0.1;
+    return p.life > 0;
+  });
+
+  if (screenShake > 0) screenShake--;
+}
+
+function drawBattle() {
+  // Dark monster realm
+  const grad = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 500);
+  grad.addColorStop(0, '#1a0a20');
+  grad.addColorStop(1, '#050510');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Floating orbs / atmosphere
+  ctx.fillStyle = 'rgba(120, 40, 180, 0.15)';
+  for (let i = 0; i < 8; i++) {
+    const ox = (i * 137 + battleTimer * 0.3) % W;
+    const oy = 60 + Math.sin(battleTimer * 0.02 + i) * 40 + i * 40;
+    ctx.beginPath();
+    ctx.arc(ox, oy, 20 + i * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Small monsters
+  monsters.forEach(m => {
+    if (!m.alive) return;
+    ctx.font = `${m.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(m.emoji, m.x, m.y);
+    // HP bar
+    if (m.hp < m.maxHp) {
+      ctx.fillStyle = '#333';
+      ctx.fillRect(m.x - 15, m.y - m.size - 8, 30, 4);
+      ctx.fillStyle = '#0f0';
+      ctx.fillRect(m.x - 15, m.y - m.size - 8, 30 * (m.hp / m.maxHp), 4);
+    }
+  });
+
+  // Arch monster
+  if (archMonster) {
+    const pulse = 1 + Math.sin(archMonster.phase) * 0.08;
+    const s = archMonster.size * pulse;
+    ctx.font = `${s}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Glow
+    ctx.shadowColor = '#ff2200';
+    ctx.shadowBlur = 25;
+    ctx.fillText(archMonster.emoji, archMonster.x, archMonster.y);
+    ctx.shadowBlur = 0;
+    // HP bar
+    const barW = Math.min(120, archMonster.size * 1.5);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(archMonster.x - barW/2, archMonster.y - s/2 - 18, barW, 8);
+    ctx.fillStyle = '#ff2200';
+    ctx.fillRect(archMonster.x - barW/2, archMonster.y - s/2 - 18, barW * (archMonster.hp / archMonster.maxHp), 8);
+    // Label
+    ctx.fillStyle = '#ff6666';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('ARCH-MONSTER', archMonster.x, archMonster.y - s/2 - 28);
+  }
+
+  // Player
+  drawPlayer(true);
+
+  // Particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Message
+  if (messageTimer > 0) {
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 4;
+    ctx.fillText(message, W / 2, 60);
+    ctx.shadowBlur = 0;
+    messageTimer--;
+  }
+
+  // Attack flash
+  if (player.attackCooldown > 12) {
+    ctx.strokeStyle = 'rgba(255, 200, 50, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 55, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+// SHARED DRAW / UTILS
+// ============================================================
+function drawPlayer(inBattle = false) {
+  if (player.invuln > 0 && Math.floor(player.invuln / 4) % 2 === 0) return; // blink
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  if (player.facing < 0) ctx.scale(-1, 1);
+  ctx.font = inBattle ? '36px serif' : '42px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(player.emoji, 0, 0);
+  ctx.restore();
+}
+
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6 - 2,
+      life: 20 + Math.random() * 20,
+      maxLife: 40,
+      size: 2 + Math.random() * 3,
+      color
+    });
+  }
+}
+
+function dist(x1, y1, x2, y2) {
+  return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+}
+
+function updateHUD() {
+  document.getElementById('candyCount').textContent = `🍬 Candy: ${candy}`;
+  document.getElementById('levelInfo').textContent = `Stage ${level}`;
+  const hp = Math.max(0, Math.ceil(player?.hp || 0));
+  const max = Math.ceil(player?.maxHp || 0);
+  document.getElementById('hpInfo').textContent = `❤️ HP: ${hp}/${max}`;
+}
+
+function endGame(won) {
+  state = 'end';
+  screenShake = 0;
+  stopMusic();
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('instructions').style.display = 'none';
+  const end = document.getElementById('endScreen');
+  end.classList.remove('hidden');
+  document.getElementById('endTitle').textContent = won ? '🏆 VICTORY!' : '💀 DEFEATED';
+  document.getElementById('endMsg').textContent = won
+    ? `You survived the monster realm with ${candy} candy!`
+    : `The Arch-Monster got you... You collected ${candy} candy. Try again!`;
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+function gameLoop() {
+  ctx.save();
+  // Only shake during active play states (not title / end / boo)
+  const canShake = (state === 'trick' || state === 'battle' || state === 'cutscene');
+  if (canShake && screenShake > 0) {
+    ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+  } else if (!canShake) {
+    screenShake = 0; // hard clear when not in a shake-able state
+  }
+
+  if (state === 'trick') {
+    updateTrick();
+    drawTrick();
+  } else if (state === 'cutscene') {
+    updateCutscene();
+    drawCutscene();
+  } else if (state === 'tunnel') {
+    updateTunnel();
+    drawTunnel();
+  } else if (state === 'battle') {
+    updateBattle();
+    drawBattle();
+  } else if (state === 'boo') {
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.restore();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
