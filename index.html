@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Halloween Candy Quest</title>
 <!--
-  Halloween Candy Quest
+  Halloween Candy Quest — v4.0
   Created by KKGilchrist / KnR GitHub
   Copyright (c) 2026 KKGilchrist / KnR
 
   License: Free to play and share with credit.
   Please don’t reupload modified copies or claim the game as your own.
+
+  Revision history: see CHANGELOG.md and RESEARCH.md in this repository.
 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,10 +31,33 @@
     box-shadow: 0 0 40px rgba(255, 100, 0, 0.3);
     border: 3px solid #ff6b00;
     border-radius: 8px;
+    max-width: 100vw;
+    max-height: 100vh;
   }
   canvas {
     display: block;
     background: #1a1a2e;
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
+  }
+  @media (max-width: 920px) {
+    body { padding: 0; align-items: flex-start; }
+    #gameContainer {
+      border-width: 2px;
+      border-radius: 0;
+      width: 100%;
+    }
+    h1 { font-size: 28px !important; letter-spacing: 2px !important; }
+    h2 { font-size: 20px !important; }
+    .costume-btn {
+      min-width: 0;
+      width: 90%;
+      max-width: 320px;
+      font-size: 18px;
+      padding: 12px 16px;
+    }
+    .subtitle { font-size: 14px; padding: 0 12px; }
   }
   #ui {
     position: absolute;
@@ -505,15 +530,30 @@ const COSTUMES = {
 window.addEventListener('keydown', e => { keys[e.code] = true; if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// Click-to-move
-canvas.addEventListener('click', (e) => {
+// Click / touch to move (works on phone and desktop)
+function setMoveTarget(clientX, clientY) {
   if (state !== 'trick' && state !== 'battle') return;
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
-  targetX = (e.clientX - rect.left) * scaleX;
-  targetY = (e.clientY - rect.top) * scaleY;
+  targetX = (clientX - rect.left) * scaleX;
+  targetY = (clientY - rect.top) * scaleY;
+}
+canvas.addEventListener('click', (e) => {
+  setMoveTarget(e.clientX, e.clientY);
 });
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) {
+    e.preventDefault();
+    setMoveTarget(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) {
+    e.preventDefault();
+    setMoveTarget(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
 
 // Costume selection
 document.querySelectorAll('.costume-btn[data-costume]').forEach(btn => {
@@ -868,7 +908,7 @@ function spawnWave() {
   archSpawnedThisWave = false;
   battleTimer = 0;
   waveIntermission = false;
-  const count = 4 + Math.floor(level * 1.2);
+  const count = 4 + Math.floor(level * 1.2); // one fewer per wave; monsters are tougher
   for (let i = 0; i < count; i++) {
     const pos = randomEdgeSpawn();
     monsters.push({
@@ -876,8 +916,8 @@ function spawnWave() {
       y: pos.y,
       vx: pos.vx,
       vy: pos.vy,
-      hp: 18 + level * 3,
-      maxHp: 18 + level * 3,
+      hp: 24 + level * 4,   // tougher small monsters
+      maxHp: 24 + level * 4,
       size: 22 + Math.random() * 10,
       emoji: ['🦇', '🎃', '💀', '🕷️', '😈'][Math.floor(Math.random() * 5)],
       alive: true
@@ -886,7 +926,7 @@ function spawnWave() {
 }
 
 function spawnArchMonster() {
-  // Eat all remaining small monsters
+  // Eat all remaining small monsters — player is penalized for each one missed
   let eaten = 0;
   monsters.forEach(m => {
     if (m.alive) {
@@ -895,10 +935,25 @@ function spawnArchMonster() {
       spawnParticles(m.x, m.y, '#ff4400', 8);
     }
   });
+
+  // Subtle penalty for missed monsters: -25 candy and -4 HP each
+  if (eaten > 0) {
+    const candyLost = eaten * 25;
+    const hpLost = eaten * 4;
+    candy = Math.max(0, candy - candyLost);
+    player.hp = Math.max(1, player.hp - hpLost); // leave at least 1 HP so Arch fight can still start
+    updateHUD();
+    message = `ARCH-MONSTER APPEARS! (−${candyLost} candy, −${hpLost} HP for ${eaten} missed)`;
+    messageTimer = 100;
+  } else {
+    message = 'ARCH-MONSTER APPEARS!';
+    messageTimer = 80;
+  }
+
   // Spawn arch from a random edge (not always the right)
   const pos = randomEdgeSpawn();
-  const sizeBoost = 34 + eaten * 5 + level * 4;
-  const baseHp = 32 + level * 12 + eaten * 7;
+  const sizeBoost = 36 + eaten * 5 + level * 5;
+  const baseHp = 39 + level * 14 + eaten * 8; // Arch +1 HP base
   archMonster = {
     x: pos.x,
     y: pos.y,
@@ -913,8 +968,6 @@ function spawnArchMonster() {
   };
   archSpawnedThisWave = true;
   screenShake = 16;
-  message = 'ARCH-MONSTER APPEARS!';
-  messageTimer = 80;
   sfxArchAppear();
 }
 
@@ -927,7 +980,7 @@ function onStageClear() {
   player.hp = player.maxHp;
 
   // Permanent small boosts so longer runs feel rewarding
-  player.maxHp += 8;
+  player.maxHp += 3; // small life gain per stage
   player.hp = player.maxHp;
   player.damage += 1.5;
   if (level % 3 === 0) player.speed += 0.15; // occasional speed boost
@@ -1040,7 +1093,11 @@ function updateBattle() {
   }
 
   // Update small monsters – bounce on all edges
+  // Proximity pressure: closer = more damage (stops AFK force-field farming)
   let aliveCount = 0;
+  let proximityHurt = false;
+  const dangerRadius = 88; // roughly auto-attack reach + a little
+
   monsters.forEach(m => {
     if (!m.alive) return;
     aliveCount++;
@@ -1051,43 +1108,67 @@ function updateBattle() {
     if (m.x > W - 25) { m.x = W - 25; m.vx = -Math.abs(m.vx); }
     if (m.y < 35) { m.y = 35; m.vy = Math.abs(m.vy); }
     if (m.y > H - 35) { m.y = H - 35; m.vy = -Math.abs(m.vy); }
-    // Contact damage
-    if (player.invuln <= 0 && dist(player.x, player.y, m.x, m.y) < 35 + m.size * 0.4) {
-      player.hp -= 6 + level * 1.5;
-      player.invuln = 45;
-      screenShake = 8;
-      updateHUD();
-      if (player.hp <= 0) endGame(false);
+
+    const d = dist(player.x, player.y, m.x, m.y);
+    if (d < dangerRadius) {
+      // 0 at edge of radius, 1 at the player's center — squared so close range hurts more
+      const closeness = 1 - (d / dangerRadius);
+      const t = closeness * closeness;
+      // Light continuous peck; stacks per nearby monster. Edge graze is mild; point-blank adds up.
+      const dmg = (0.045 + level * 0.012) * t;
+      player.hp -= dmg;
+      proximityHurt = true;
+    }
+    // True overlap = small extra bump (fair, not the old "ouch" spike)
+    if (player.invuln <= 0 && d < 28 + m.size * 0.35) {
+      player.hp -= 4 + level * 0.8;
+      player.invuln = 35;
+      screenShake = 6;
+      proximityHurt = true;
     }
   });
 
+  if (proximityHurt) {
+    updateHUD();
+    if (player.hp <= 0) endGame(false);
+  }
+
   // Spawn arch only after enough fight time and few monsters left
-  // Longer delay so player isn't rushed
   if (!archMonster && !waveIntermission && !archSpawnedThisWave) {
     const readyByCount = aliveCount <= 1;
-    const readyByTime = battleTimer > 520 + level * 40; // more time before forced arch
+    const readyByTime = battleTimer > 520 + level * 40;
     if ((readyByCount && battleTimer > 180) || readyByTime) {
       spawnArchMonster();
     }
   }
 
-  // Update arch – slower & less punishing at low levels
+  // Update arch
   if (archMonster) {
     if (archMonster.eatAnim > 0) archMonster.eatAnim--;
     const dx = player.x - archMonster.x;
     const dy = player.y - archMonster.y;
     const d = Math.sqrt(dx * dx + dy * dy) || 1;
-    const speed = 0.85 + level * 0.06; // slow speed gains per level
+    const speed = 0.9 + level * 0.07;
     archMonster.vx = (dx / d) * speed;
     archMonster.vy = (dy / d) * speed;
     archMonster.x += archMonster.vx;
     archMonster.y += archMonster.vy;
     archMonster.phase += 0.08;
 
-    if (player.invuln <= 0 && dist(player.x, player.y, archMonster.x, archMonster.y) < 40 + archMonster.size * 0.5) {
-      player.hp -= 8 + level * 1.5; // slow damage gains per level
-      player.invuln = 55;
-      screenShake = 12;
+    const ad = dist(player.x, player.y, archMonster.x, archMonster.y);
+    const archDanger = 100 + archMonster.size * 0.25;
+    if (ad < archDanger) {
+      const closeness = 1 - (ad / archDanger);
+      const t = closeness * closeness;
+      player.hp -= (0.07 + level * 0.02) * t;
+      updateHUD();
+      if (player.hp <= 0) endGame(false);
+    }
+    // Direct Arch bump — moderate
+    if (player.invuln <= 0 && ad < 36 + archMonster.size * 0.45) {
+      player.hp -= 7 + level * 1.2;
+      player.invuln = 45;
+      screenShake = 10;
       updateHUD();
       if (player.hp <= 0) endGame(false);
     }
